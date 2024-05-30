@@ -1,0 +1,4 @@
+[project]
+name = "homelab-assistant"
+version = "0.1"
+description = "Homelab automation tools"
