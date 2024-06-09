@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "homelab-assistant"
-version = "1.0"
+version = "1.1"
 description = "HomeLab automation tools"
 readme = "README.md"
 
