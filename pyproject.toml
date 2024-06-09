@@ -5,10 +5,12 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "homelab-assistant"
 version = "1.0"
-description = "Homelab automation tools"
+description = "HomeLab automation tools"
 readme = "README.md"
 
 dependencies = [
+    "attrs",
+    "cattrs",
     "pyyaml",
     "requests",
     "rich",
