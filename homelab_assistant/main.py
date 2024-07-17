@@ -30,10 +30,7 @@ def export(args: argparse.Namespace, config: Config, portainer_connector: Portai
 
 def sync(args: argparse.Namespace, config: Config, portainer_connector: PortainerHelper) -> None:
     """ `sync` entrypoint runner. """
-    del args  # Specific args are not used for sync
-
-    # TODO - Options to dry run?
-    portainer_connector.sync_stacks(config)
+    portainer_connector.sync_stacks(config, args.dry_run)
 
 
 __ROOT_PARSER = argparse.ArgumentParser(add_help=True)
@@ -44,6 +41,8 @@ EXPORT_PARSER.set_defaults(entry_func=export)
 EXPORT_PARSER.add_argument("export_file")
 
 SYNC_PARSER = __ROOT_SUBPARSERS.add_parser("sync", parents=[parent_parser()])
+SYNC_PARSER.add_argument("--dry-run", action=argparse.BooleanOptionalAction,
+                         help="Preview sync changes without making them")
 SYNC_PARSER.set_defaults(entry_func=sync)
 
 console = Console()

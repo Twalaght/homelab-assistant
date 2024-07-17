@@ -134,7 +134,7 @@ class PortainerHelper:
 
         return output
 
-    def sync_stacks(self, config: Config) -> None:
+    def sync_stacks(self, config: Config, dry_run: bool) -> None:
         """ Sync Portainer stack environment variable values with values defined in config.
 
         Raises:
@@ -143,6 +143,7 @@ class PortainerHelper:
 
         Args:
             config (Config): Config to source common and stack specific environment variable values from.
+            dry_run (bool): Preview changes without syncing if True.
         """
         portainer_stack_info = self.get_stacks()
 
@@ -183,6 +184,10 @@ class PortainerHelper:
                 ],
                 "stackFileContent": compose,
             }
+
+            if dry_run:
+                console.print(f"Changes detected for '{stack_name}'")
+                continue
 
             # Update the stack with the generated payload
             console.print(f"Updating {stack_name}... ", end="")
