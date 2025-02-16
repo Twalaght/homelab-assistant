@@ -1,5 +1,6 @@
 """ Runner module to sync Portainer stacks with local config. """
 import argparse
+import difflib
 from pathlib import Path
 
 import yaml
@@ -75,6 +76,17 @@ def sync(args: argparse.Namespace) -> None:
         if (config_env == portainer_env) and (compose == portainer_compose):
             logger.print(f"'{stack_name}': [blue]Nothing to do[/]")
             continue
+
+        # Log out the compose different to update if the files did not match.
+        if compose != portainer_compose:
+            for line in difflib.unified_diff(portainer_compose.splitlines(), compose.splitlines(), lineterm=""):
+                colour = "default"
+                if line.startswith("+"):
+                    colour = "green"
+                elif line.startswith("-"):
+                    colour = "red"
+
+                logger.info(f"[{colour}]{line}[/]")
 
         # Add required environment variables and compose file to the update payload.
         payload = {
