@@ -1,37 +1,102 @@
-[build-system]
-requires = ["setuptools"]
-build-backend = "setuptools.build_meta"
+# ┌───────────────────────┐
+# │  PROJECT DEFINITIONS  │
+# └───────────────────────┘
 
-[project]
+[tool.poetry]
 name = "homelab-assistant"
-version = "1.1"
 description = "HomeLab automation tools"
+authors = [
+    "Twalaght <52785900+Twalaght@users.noreply.github.com>",
+]
 readme = "README.md"
+version="1.2.0"
+packages = [{include = "homelab_assistant", from="src"}]
 
-dependencies = [
-    "attrs",
-    "cattrs",
-    "pyyaml",
-    "requests",
-    "rich",
-]
-
-[project.optional-dependencies]
-dev = [
-    "flake8",
-    "flake8-pyproject",
-    "ruff"
-]
-
-[project.scripts]
+[tool.poetry.scripts]
 homelaba = "homelab_assistant.main:main"
 
-[tool.setuptools.packages.find]
-where = ["."]
-include = ["homelab_assistant*"]
+# ┌──────────────────────────────┐
+# │  PLUMBING: package building  │
+# └──────────────────────────────┘
 
+[build-system]
+requires = ["poetry-core", "poetry-dynamic-versioning"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry-dynamic-versioning]
+enable = true
+
+# ┌────────────────┐
+# │  DEPENDENCIES  │
+# └────────────────┘
+
+[tool.poetry.dependencies]
+python = "^3.10"
+pydantic = "^2.10.6"
+PyYAML = "^6.0"
+requests = "^2.31"
+rich = "^13.7"
+rich-argparse = "^1.4"
+
+# Dependencies for local development which are NOT used at runtime.
+flake8-annotations = {version = "^3.0", optional = true}
+flake8-assertive = {version = "^2.1", optional = true}
+flake8-bugbear = {version = "^24.10", optional = true}
+flake8-builtins = {version = "^2.1", optional = true}
+flake8-commas = {version = "^4.0", optional = true}
+flake8-comprehensions = {version = "^3.14", optional = true}
+flake8-docstrings = {version = "^1.7", optional = true}
+flake8-eradicate = {version = "^1.5", optional = true}
+flake8-function-order = {version = "^0.0.5", optional = true}
+flake8-import-order = {version = "^0.18", optional = true}
+flake8-pyproject = {version = "^1.2", optional = true}
+flake8-todo = {version = "^0.7", optional = true}
+flake8 = {version = "^7.1", optional = true}
+pep8-naming = {version = "^0.14", optional = true}
+pydoclint = {version = "^0.5", optional = true}
+pytype = {version = "^2024.4", optional = true}
+ruff = {version = "^0.7", optional = true}
+
+
+[tool.poetry.extras]
+dev = [
+    "flake8-annotations",
+    "flake8-assertive",
+    "flake8-bugbear",
+    "flake8-builtins",
+    "flake8-commas",
+    "flake8-comprehensions",
+    "flake8-docstrings",
+    "flake8-eradicate",
+    "flake8-function-order",
+    "flake8-import-order",
+    "flake8-pyproject",
+    "flake8-todo",
+    "flake8",
+    "pep8-naming",
+    "pydoclint",
+    "pytype",
+    "ruff",
+]
+
+# ┌──────────────────┐
+# │  LINTER: flake8  │
+# └──────────────────┘
+
+# Flake8 python linter - see https://github.com/PyCQA/flake8
+# Using a plugin to support pyproject.toml - see https://github.com/john-hen/Flake8-pyproject
 [tool.flake8]
 max-line-length = 120
+
+exclude = [
+    "scripts",
+]
+
+per-file-ignores = [
+    "src/homelab_assistant/utils/logging.py:A003,A005,N802",  # A003 Class attribute is shadowing a Python builtin
+                                                              # A005 The module is shadowing a Python builtin module
+                                                              # N802 Function name should be lowercase
+]
 
 extend-ignore = [
     "ANN002",  # Missing type annotation for *args
@@ -42,11 +107,12 @@ extend-ignore = [
     "D104",    # Missing docstring in public package
     "D107",    # Missing docstring in __init__
     "D210",    # No whitespaces allowed surrounding docstring text
+    "DOC601",  # Class docstring contains fewer class attributes than actual class attributes.
+    "DOC603",  # Class docstring attributes are different from actual class attributes.
     "I201",    # Missing newline between import groups
     "T000",    # Todo note found
 ]
 
-# Pydoclint config
 style = "google"
 
 import-order-style = "edited"
@@ -54,8 +120,21 @@ application-import-names = [
     "homelab_assistant",
 ]
 
+# Do not flag pytype inline comments as commented out code.
+eradicate-whitelist = "pytype"
+
+# ┌────────────────┐
+# │  LINTER: ruff  │
+# └────────────────┘
+
+# Ruff python linter - see https://github.com/astral-sh/ruff
 [tool.ruff]
 line-length = 120
+target-version = "py312"
+
+exclude = [
+    "scripts",
+]
 
 [tool.ruff.format]
 quote-style = "double"
@@ -71,17 +150,12 @@ ignore = [
     "EM",  # flake8-errmsg
     "FBT", # flake8-boolean-trap
     "G",   # flake8-logging-format
-    "S",   # flake8-bandit
     "T20", # flake8-print
     "TD",  # flake8-todos
 
     "ANN002", # Missing type annotation for `*args`
     "ANN003", # Missing type annotation for `**kwargs`
-    "ANN101", # Missing type annotation for `self` in method
-    "ANN102", # Missing type annotation for `cls` in classmethod
     "ANN401", # Dynamically typed expressions (typing.Any) are disallowed
-
-    "BLE001", # Do not catch blind exception
 
     "C901", # Structure is too complex
 
@@ -100,20 +174,120 @@ ignore = [
     "PLR0915", # Too many statements
     "PLR2004", # Magic value used in comparison
 
-    "PT006", # Wrong name(s) type in `@pytest.mark.parametrize`
+    "PTH123", # `open()` should be replaced by `Path.open()` (TODO - Can eventually disable)
 
     "RUF012", # Mutable class attributes should be annotated with `typing.ClassVar`
     "RUF013", # PEP 484 prohibits implicit Optional
 
-    "TRY003", # Avoid specifying long messages outside the exception class
-    "TRY301", # Abstract raise to an inner function
+    "SLF001", # Private member accessed
 
-    "UP024", # Replace aliased errors with `OSError`
     "UP035", # Import from {target} instead: {names}
 ]
 
+# Do not flag pytype inline comments as commented out code.
+task-tags = ["pytype"]
+
 [tool.ruff.lint.isort]
+# Enforces consistency with flake8 isort config
+# See https://docs.astral.sh/ruff/settings/#lintisort
 order-by-type = false
+
+[tool.ruff.lint.per-file-ignores]
+"src/homelab_assistant/utils/logging.py" = [
+    "A005", # The module is shadowing a Python builtin module
+    "N802", # Function name should be lowercase
+]
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"
+
+# ┌────────────────────────┐
+# │  TYPE CHECKER: pytype  │
+# └────────────────────────┘
+
+# Python type checker - see https://github.com/google/pytype
+[tool.pytype]
+# Space-separated list of files or directories to process.
+inputs = [
+    "src/homelab_assistant",
+]
+
+# Paths to source code directories, separated by ':'.
+pythonpath = "src"
+
+# Space-separated list of files or directories to exclude.
+# Specifically exclude all test files, but not the files that set up and run the tests.
+exclude = [
+    "**/test_*.py",
+]
+
+# Space-separated list of error names to ignore.
+# Required to prevent issues with importing the compiled stub files.
+disable = [
+    "pyi-error",
+]
+
+# Keep going past errors to analyze as many files as possible.
+keep_going = true
+report_errors = true
+
+# Run N jobs in parallel. When 'auto' is used, this will be equivalent to the
+# number of CPUs on the host system.
+jobs = "auto"
+
+# ┌────────────────────────────────────────────────────────────────────────┐
+# │ NOTE: Pytype config above here is set by user, below is auto-generated │
+# └────────────────────────────────────────────────────────────────────────┘
+
+# All pytype output goes here.
+output = ".pytype"
+
+# Bind 'self' in methods with non-transparent decorators. This flag is temporary
+# and will be removed once this behavior is enabled by default.
+bind_decorated_methods = true
+
+# Don't allow None to match bool. This flag is temporary and will be removed
+# once this behavior is enabled by default.
+none_is_not_bool = true
+
+# Enable parameter count checks for overriding methods with renamed arguments.
+# This flag is temporary and will be removed once this behavior is enabled by
+# default.
+overriding_renamed_parameter_count_checks = true
+
+# Variables initialized as None retain their None binding. This flag is
+# temporary and will be removed once this behavior is enabled by default.
+strict_none_binding = true
+
+# Support the third-party fiddle library. This flag is temporary and will be
+# removed once this behavior is enabled by default.
+use_fiddle_overlay = true
+
+# Opt-in: Do not allow Any as a return type.
+no_return_any = false
+
+# Opt-in: Require decoration with @typing.override when overriding a method or
+# nested class attribute of a parent class.
+require_override_decorator = false
+
+# Experimental: Infer precise return types even for invalid function calls.
+precise_return = false
+
+# Experimental: Solve unknown types to label with structural types.
+protocols = false
+
+# Experimental: Only load submodules that are explicitly imported.
+strict_import = false
+
+# Experimental: Enable exhaustive checking of function parameter types.
+strict_parameter_checks = false
+
+# Experimental: Emit errors for comparisons between incompatible primitive
+# types.
+strict_primitive_comparisons = false
+
+# Experimental: Check that variables are defined in all possible code paths.
+strict_undefined_checks = false
+
+# Experimental: FOR TESTING ONLY. Use pytype/rewrite/.
+use_rewrite = false
