@@ -9,7 +9,7 @@ authors = [
     "Twalaght <52785900+Twalaght@users.noreply.github.com>",
 ]
 readme = "README.md"
-version="0.0.0"  # Required field, but overridden by the `poetry-dynamic-versioning` plugin.
+version="1.2.0"
 packages = [{include = "homelab_assistant", from="src"}]
 
 [tool.poetry.scripts]
@@ -32,6 +32,7 @@ enable = true
 
 [tool.poetry.dependencies]
 python = "^3.10"
+pydantic = "^2.10.6"
 PyYAML = "^6.0"
 requests = "^2.31"
 rich = "^13.7"
