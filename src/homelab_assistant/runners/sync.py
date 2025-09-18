@@ -109,6 +109,9 @@ def sync_endpoint(config: Config, portainer_helper: PortainerHelper, endpoint_na
             logger.print(f"'{stack_name}': [blue]Nothing to do[/]")
             continue
 
+        if not push:
+            logger.print(f"'{stack_name}': [green]Ready to update[/]")
+
         # Display diffs for both the environment and compose files.
         if portainer_environment != config_environment:
             display_environment_diff(base_environment=portainer_environment, new_environment=config_environment)
@@ -124,7 +127,6 @@ def sync_endpoint(config: Config, portainer_helper: PortainerHelper, endpoint_na
         }
 
         if not push:
-            logger.print(f"'{stack_name}': [green]Ready to update[/]")
             continue
 
         # Update the stack with the generated payload.
@@ -154,8 +156,12 @@ def display_environment_diff(base_environment: dict[str, str], new_environment: 
 
 def display_compose_diff(base_compose: str, new_compose: str) -> None:
     """ Display a diff between a base and new compose file. """
+    if not (lines := list(difflib.unified_diff(base_compose.splitlines(), new_compose.splitlines(), lineterm=""))):
+        logger.info("Compose diff: Newlines only")
+        return
+
     logger.info("Compose diff:")
-    for line in difflib.unified_diff(base_compose.splitlines(), new_compose.splitlines(), lineterm=""):
+    for line in lines:
         colour = "default"
         if line.startswith("+"):
             colour = "green"
