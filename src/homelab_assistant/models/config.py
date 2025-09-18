@@ -34,12 +34,18 @@ class Stack(BaseModel):
     sync:        bool = True
 
 
+class Endpoint(BaseModel):
+    """ Model definition of a Portainer endpoint. """
+
+    stacks: dict[str, Stack] = {}
+
+
 class Config(BaseModel):
     """ Model definition of main config object. """
 
     portainer:          Portainer
     git_default:        GitDefault | None = None
-    stacks:             dict[str, Stack] = {}
+    endpoints:          dict[str, Endpoint] = {}
     common_environment: dict[str, str] = {}
 
     def check(self) -> None:
@@ -55,12 +61,13 @@ class Config(BaseModel):
 
         all_stack_env_vars = {}
         check_env_vars(self.common_environment, "Common environment")
-        for stack_name, stack_data in self.stacks.items():
-            check_env_vars(stack_data.environment, f"Stack '{stack_name}'")
+        for full_stack_data in self.endpoints.values():
+            for stack_name, stack_data in full_stack_data.stacks.items():
+                check_env_vars(stack_data.environment, f"Stack '{stack_name}'")
 
-            # Keep a dictionary of all defined environment variables in all stacks.
-            for env_name, env_value in stack_data.environment.items():
-                all_stack_env_vars.setdefault(env_name, []).append(env_value)
+                # Keep a dictionary of all defined environment variables in all stacks.
+                for env_name, env_value in stack_data.environment.items():
+                    all_stack_env_vars.setdefault(env_name, []).append(env_value)
 
         # Suggest potential comment environment variables, if they were defined multiple times with the same value.
         for env_name, env_values in all_stack_env_vars.items():

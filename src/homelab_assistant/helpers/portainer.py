@@ -23,16 +23,36 @@ class PortainerHelper:
         self.portainer_url = portainer_url
         self.session = requests.session()
         self.session.headers.update({"X-API-Key": api_key})
+        self.endpoint_mapping = {}
 
-    def get_stacks(self) -> dict[str, dict[str, Any]]:
-        """ Get data on all defined Portainer stacks.
+    def map_endpoints(self) -> None:
+        """ Generate a mapping of endpoint IDs to their associated friendly names. """
+        response = self.session.get(f"{self.portainer_url}/api/endpoints")
+        response.raise_for_status()
+
+        self.endpoint_mapping = {endpoint["Id"]: endpoint["Name"] for endpoint in response.json()}
+
+    def get_stacks(self) -> dict[str, dict[str, dict[str, Any]]]:
+        """ Get data on all defined Portainer stacks, in all endpoints.
 
         Returns:
-            dict[str, dict[str, Any]]: Key-value pairs of stack names to Portainer stack information.
+            dict[str, dict[str, dict[str, Any]]]: Endpoint friendly name grouped key-value pairs of \
+                                                  stack names to Portainer stack information.
         """
+        if not self.endpoint_mapping:
+            self.map_endpoints()
+
         response = self.session.get(f"{self.portainer_url}/api/stacks")
         response.raise_for_status()
-        return {stack["Name"]: stack for stack in response.json()}
+
+        endpoint_grouped_stack_info = {self.endpoint_mapping[endpoint]: {} for endpoint in
+                                       {stack["EndpointId"] for stack in response.json()}}
+
+        for stack in response.json():
+            friendly_endpoint_name = self.endpoint_mapping[stack["EndpointId"]]
+            endpoint_grouped_stack_info[friendly_endpoint_name][stack["Name"]] = stack
+
+        return endpoint_grouped_stack_info
 
     def export_config_from_stacks(self) -> dict[str, dict[str, dict[str, str]]]:
         """ Export a config file with environment information currently present in Portainer's stacks.
@@ -64,22 +84,23 @@ class PortainerHelper:
         except requests.HTTPError:
             return None
 
-    def get_git_compose_file(self, stack_name: str, config: Config) -> str | None:
+    def get_git_compose_file(self, endpoint_name: str, stack_name: str, config: Config) -> str | None:
         """ Get the compose file associated a stacks Git config.
 
         Args:
+            endpoint_name (str): Name of the endpoint environment to inspect stacks of.
             stack_name (str): Name of the stack in config to retrieve compose file for.
             config (Config): Config object to fet Git config from.
 
         Returns:
             str | None: Compose file data string, or None if it did not exist.
         """
-        if not (stack_git_config := config.stacks.get(stack_name, Stack()).git):
+        if not (stack_git_config := config.endpoints[endpoint_name].stacks.get(stack_name, Stack()).git):
             return None
 
         git_default = config.git_default or GitDefault()
-        repository = git_default.repository or stack_git_config.repository
-        branch = git_default.branch or stack_git_config.branch
+        repository = stack_git_config.repository or git_default.repository
+        branch = stack_git_config.branch or git_default.branch
         file_path = stack_git_config.file_path
 
         if not all((repository, branch, file_path)):
@@ -114,12 +135,13 @@ class PortainerHelper:
         return list({env_var.strip() for env_var in re.findall(r"\${(.*?)}", compose_file)})
 
     def generate_env_values_from_config(self, required_env_names: list[str],
-                                        config: Config, stack_name: str) -> dict[str, str]:
+                                        config: Config, endpoint_name: str, stack_name: str) -> dict[str, str]:
         """ Generate environment variable key value pairs defined in config for a given stack.
 
         Args:
             required_env_names (list[str]): Environment variable names required by the compose file.
             config (Config): Config object to source common and stack specific environment variable values from.
+            endpoint_name (str): Name of the endpoint environment to inspect stacks of.
             stack_name (str): Name of the stack to consider.
 
         Raises:
@@ -131,7 +153,7 @@ class PortainerHelper:
         output = {}
         for env in required_env_names:
             value = (config.common_environment.get(env, None) or
-                     config.stacks.get(stack_name, Stack()).environment.get(env, None))
+                     config.endpoints[endpoint_name].stacks.get(stack_name, Stack()).environment.get(env, None))
 
             # Values are wrapped in double quotes to escape them in portainer properly.
             output[env] = f'"{value}"' if value else None
