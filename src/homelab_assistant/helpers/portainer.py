@@ -23,14 +23,14 @@ class PortainerHelper:
         self.portainer_url = portainer_url
         self.session = requests.session()
         self.session.headers.update({"X-API-Key": api_key})
-        self.endpoint_mapping = {}
+        self.endpoint_mapping: dict[int, str] = {}
 
-    def map_endpoints(self) -> None:
+    def map_endpoints(self) -> dict[int, str]:
         """ Generate a mapping of endpoint IDs to their associated friendly names. """
         response = self.session.get(f"{self.portainer_url}/api/endpoints")
         response.raise_for_status()
 
-        self.endpoint_mapping = {endpoint["Id"]: endpoint["Name"] for endpoint in response.json()}
+        return {endpoint["Id"]: endpoint["Name"] for endpoint in response.json()}
 
     def get_stacks(self) -> dict[str, dict[str, dict[str, Any]]]:
         """ Get data on all defined Portainer stacks, in all endpoints.
@@ -40,7 +40,7 @@ class PortainerHelper:
                                                   stack names to Portainer stack information.
         """
         if not self.endpoint_mapping:
-            self.map_endpoints()
+            self.endpoint_mapping = self.map_endpoints()
 
         response = self.session.get(f"{self.portainer_url}/api/stacks")
         response.raise_for_status()
@@ -53,6 +53,33 @@ class PortainerHelper:
             endpoint_grouped_stack_info[friendly_endpoint_name][stack["Name"]] = stack
 
         return endpoint_grouped_stack_info
+
+    def update_stack(self, endpoint_id: int, stack_id: int, compose: str, environment: dict[str, str]) -> None:
+        """ Update a stack specified by endpoint and stack ID with a given compose and environment.
+
+        Args:
+            endpoint_id (int): Endpoint the stack exists on.
+            stack_id (int): ID of the stack to update.
+            compose (str): Compose file content.
+            environment (dict[str, str]): Key value pairs of environment variable names to values.
+        """
+        # Add required environment variables and compose file to the update payload.
+        payload = {
+            "env": [
+                {"name": name, "value": value} for name, value in environment.items()
+            ],
+            "stackFileContent": compose,
+        }
+
+        # Update the stack with the generated payload.
+        response = self.session.put(
+            url=f"{self.portainer_url}/api/stacks/{stack_id}",
+            params={"endpointId": endpoint_id},
+            json=payload,
+        )
+        response.raise_for_status()
+
+        return response.json()
 
     def export_config_from_stacks(self) -> dict[str, dict[str, dict[str, str]]]:
         """ Export a config file with environment information currently present in Portainer's stacks.

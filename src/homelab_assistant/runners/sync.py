@@ -118,27 +118,17 @@ def sync_endpoint(config: Config, portainer_helper: PortainerHelper, endpoint_na
         if portainer_compose != compose:
             display_compose_diff(base_compose=portainer_compose, new_compose=compose)
 
-        # Add required environment variables and compose file to the update payload.
-        payload = {
-            "env": [
-                {"name": name, "value": value} for name, value in config_environment.items()
-            ],
-            "stackFileContent": compose,
-        }
-
-        if not push:
-            continue
-
-        # Update the stack with the generated payload.
-        logger.print(f"'{stack_name}': Updating...")
-        deploy_url = (f"{portainer_helper.portainer_url}/api/stacks/{stack_id}?endpointId={endpoint_id}")
+        # Add required environment variables and compose file to the update payload, and update the stack.
         try:
-            response = portainer_helper.session.put(deploy_url, json=payload)
-            response.raise_for_status()
+            portainer_helper.update_stack(
+                endpoint_id=endpoint_id,
+                stack_id=stack_id,
+                compose=compose,
+                environment=config_environment,
+            )
+            logger.print(f"'{stack_name}': [green]Successfully updated[/]")
         except HTTPError:
             logger.exception(f"'{stack_name}': [red]Unable to update[/]")
-
-        logger.print(f"'{stack_name}': [green]Successfully updated[/]")
 
 
 def display_environment_diff(base_environment: dict[str, str], new_environment: dict[str, str]) -> None:
