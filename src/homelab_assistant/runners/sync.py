@@ -2,6 +2,7 @@
 import argparse
 import difflib
 from pathlib import Path
+from typing import Any
 
 import yaml
 from requests import HTTPError
@@ -26,18 +27,45 @@ def sync(args: argparse.Namespace) -> None:
         config = Config(**config_data)
         config.check()
 
-    portainer_connector = PortainerHelper(
+    # Create a Portainer helper from config.
+    portainer_helper = PortainerHelper(
         api_key=config.portainer.api_key,
         portainer_url=config.portainer.url,
     )
 
+    # Exit early if there are no stacks to stacks at all on Portainer.
+    if not (endpoint_stack_info := portainer_helper.get_stacks()):
+        logger.print("No stacks defined in Portainer")
+        return
+
+    for endpoint_name, stack_info in endpoint_stack_info.items():
+        # Skip the endpoint if no local config was defined for it.
+        if endpoint_name not in config.endpoints:
+            logger.info(f"No config defined for endpoint '{endpoint_name}'")
+            continue
+
+        logger.print(f"Syncing with endpoint '{endpoint_name}'")
+        sync_endpoint(config, portainer_helper, endpoint_name, stack_info, args.push)
+
+
+def sync_endpoint(config: Config, portainer_helper: PortainerHelper, endpoint_name: str,
+                  stack_info: dict[str, dict[str, Any]], push: bool = False) -> None:
+    """ Synchronise a given endpoint on Portainer with stack information defined in config.
+
+    Args:
+        config (Config): Config model with definitions of stacks for the given endpoint.
+        portainer_helper (PortainerHelper): Portainer helper instance to interact with Portainer.
+        endpoint_name (str): Name of the Portainer endpoint to consider.
+        stack_info (dict[str, dict[str, Any]]): Existing stack information, sourced from Portainer.
+        push (bool, optional): Push changes to Portainer. Defaults to False, where changes will \
+                               be printed, but not pushed upstream.
+    """
     # Create a list of all stack names defined in Portainer, and local config.
-    portainer_stack_info = portainer_connector.get_stacks()
-    all_stack_names = sorted({*portainer_stack_info.keys(), *config.stacks.keys()})
+    all_stack_names = sorted({*stack_info.keys(), *config.endpoints[endpoint_name].stacks.keys()})
 
     for stack_name in all_stack_names:
-        portainer_info = portainer_stack_info.get(stack_name, None)
-        config_info = config.stacks.get(stack_name, None)
+        portainer_info = stack_info.get(stack_name)
+        config_info = config.endpoints[endpoint_name].stacks.get(stack_name, None)
 
         if not config_info:
             logger.warning(f"'{stack_name}': Defined only in [blue]Portainer[/]")
@@ -48,7 +76,7 @@ def sync(args: argparse.Namespace) -> None:
             logger.warning(f"'{stack_name}': Defined only in [green]local config[/]")
             continue
 
-        logger.info(f"'{stack_name}': Starting processing...")
+        logger.debug(f"'{stack_name}': Starting processing...")
 
         # If the stack is not required to be synced, continue.
         if not config_info.sync:
@@ -60,53 +88,74 @@ def sync(args: argparse.Namespace) -> None:
         endpoint_id = portainer_info["EndpointId"]
 
         # Fetch the Portainer compose file, and a Git compose file if it is defined.
-        git_compose = portainer_connector.get_git_compose_file(stack_name, config)
-        portainer_compose = portainer_connector.get_stack_compose_file(stack_id)
+        git_compose = portainer_helper.get_git_compose_file(endpoint_name, stack_name, config)
+        portainer_compose = portainer_helper.get_stack_compose_file(stack_id)
 
         # Set the compose file and generate the required environment variables.
         compose = git_compose or portainer_compose
-        required_env_vars = portainer_connector.get_defined_env_vars(compose)
+        required_env_vars = portainer_helper.get_defined_env_vars(compose)
         try:
-            config_env = portainer_connector.generate_env_values_from_config(required_env_vars, config, stack_name)
+            config_environment = portainer_helper.generate_env_values_from_config(
+                required_env_vars, config, endpoint_name, stack_name,
+            )
         except ValueError:
             continue
 
-        # Check if config or compose file need updating.
-        portainer_env = {env["name"]: env["value"] for env in portainer_info["Env"]}
-        if (config_env == portainer_env) and (compose == portainer_compose):
+        # Construct environment mapping from existing environment in Portainer.
+        portainer_environment = {env["name"]: env["value"] for env in portainer_info["Env"]}
+
+        # Continue if there is no action to be taken.
+        if (portainer_environment == config_environment) and (portainer_compose == compose):
             logger.print(f"'{stack_name}': [blue]Nothing to do[/]")
             continue
 
-        # Log out the compose different to update if the files did not match.
-        if compose != portainer_compose:
-            for line in difflib.unified_diff(portainer_compose.splitlines(), compose.splitlines(), lineterm=""):
-                colour = "default"
-                if line.startswith("+"):
-                    colour = "green"
-                elif line.startswith("-"):
-                    colour = "red"
-
-                logger.info(f"[{colour}]{line}[/]")
-
-        # Add required environment variables and compose file to the update payload.
-        payload = {
-            "env": [
-                {"name": name, "value": value} for name, value in config_env.items()
-            ],
-            "stackFileContent": compose,
-        }
-
-        if not args.push:
+        if not push:
             logger.print(f"'{stack_name}': [green]Ready to update[/]")
-            continue
 
-        # Update the stack with the generated payload.
-        logger.print(f"'{stack_name}': Updating...")
-        deploy_url = (f"{portainer_connector.portainer_url}/api/stacks/{stack_id}?endpointId={endpoint_id}")
+        # Display diffs for both the environment and compose files.
+        if portainer_environment != config_environment:
+            display_environment_diff(base_environment=portainer_environment, new_environment=config_environment)
+        if portainer_compose != compose:
+            display_compose_diff(base_compose=portainer_compose, new_compose=compose)
+
+        # Add required environment variables and compose file to the update payload, and update the stack.
         try:
-            response = portainer_connector.session.put(deploy_url, json=payload)
-            response.raise_for_status()
+            portainer_helper.update_stack(
+                endpoint_id=endpoint_id,
+                stack_id=stack_id,
+                compose=compose,
+                environment=config_environment,
+            )
+            logger.print(f"'{stack_name}': [green]Successfully updated[/]")
         except HTTPError:
             logger.exception(f"'{stack_name}': [red]Unable to update[/]")
 
-        logger.print(f"'{stack_name}': [green]Successfully updated[/]")
+
+def display_environment_diff(base_environment: dict[str, str], new_environment: dict[str, str]) -> None:
+    """ Display a diff between a base and new environment definitions. """
+    logger.info("Environment diff:")
+    if (added_keys := (set(new_environment) - set(base_environment))):
+        logger.info(f"[green]Added:[/] {', '.join(added_keys)}")
+    if (removed_keys := (set(base_environment) - set(new_environment))):
+        logger.info(f"[red]Removed:[/] {', '.join(removed_keys)}")
+    if (changed_keys := [
+        key for key in new_environment if key in base_environment and new_environment[key] != base_environment[key]
+    ]):
+        logger.info(f"[blue]Changed:[/] {', '.join(changed_keys)}")
+
+
+def display_compose_diff(base_compose: str, new_compose: str) -> None:
+    """ Display a diff between a base and new compose file. """
+    if not (lines := list(difflib.unified_diff(base_compose.splitlines(), new_compose.splitlines(), lineterm=""))):
+        logger.info("Compose diff: Newlines only")
+        return
+
+    logger.info("Compose diff:")
+    for line in lines:
+        colour = "default"
+        if line.startswith("+"):
+            colour = "green"
+        elif line.startswith("-"):
+            colour = "red"
+
+        logger.info(f"[{colour}]{line}[/]")
