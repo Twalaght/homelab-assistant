@@ -5,7 +5,7 @@ from typing import Any, cast
 
 import requests
 
-from homelab_assistant.models.config import Config, GitDefault, Stack
+from homelab_assistant.models.config import Config, Endpoint, GitDefault, Stack
 from homelab_assistant.utils import logging
 
 logger = logging.getLogger(__name__)
@@ -81,17 +81,22 @@ class PortainerHelper:
 
         return response.json()
 
-    def export_config_from_stacks(self) -> dict[str, dict[str, dict[str, str]]]:
-        """ Export a config file with environment information currently present in Portainer's stacks.
-
-        Returns:
-            dict[str, dict[str, dict[str, str]]]: Stacks with Portainer's stack environment information.
-        """
+    def export_stack_env_from_endpoints(self) -> dict[str, Endpoint]:
+        """ Export a config file of all currently present stack environment information in all endpoints. """
         output = {}
-        for stack in self.get_stacks().values():
-            if (stack_env := {env["name"]: env["value"].strip('"') for env in stack["Env"]}):
-                output.setdefault(str(stack["Name"]), {"environment": {}})
-                output[str(stack["Name"])]["environment"] = stack_env
+        for endpoint_name, stacks in self.get_stacks().items():
+            output[endpoint_name] = Endpoint(
+                stacks={
+                    stack_name: Stack(
+                        environment={
+                            env.get("name", ""): env.get("value", "").strip('"')
+                            for env in stack_data.get("Env", [])
+                        },
+                        sync=False,
+                    )
+                    for stack_name, stack_data in stacks.items()
+                },
+            )
 
         return output
 
