@@ -29,7 +29,8 @@ def sync(args: argparse.Namespace) -> None:
         portainer_url=config.portainer.url,
     )
 
-    output = portainer_connector.export_config_from_stacks()
+    output = {endpoint_name: endpoint_stack_info.model_dump(exclude_none=True)
+              for endpoint_name, endpoint_stack_info in portainer_connector.export_stack_env_from_endpoints().items()}
     with Path(args.export_file).open("w") as f:
         yaml.dump(output, f, indent=4)
 

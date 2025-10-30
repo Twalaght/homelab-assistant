@@ -88,11 +88,14 @@ def sync_endpoint(config: Config, portainer_helper: PortainerHelper, endpoint_na
         endpoint_id = portainer_info["EndpointId"]
 
         # Fetch the Portainer compose file, and a Git compose file if it is defined.
-        git_compose = portainer_helper.get_git_compose_file(endpoint_name, stack_name, config)
-        portainer_compose = portainer_helper.get_stack_compose_file(stack_id)
+        git_compose = portainer_helper.get_git_compose_file(endpoint_name, stack_name, config) or ""
+        portainer_compose = portainer_helper.get_stack_compose_file(stack_id) or ""
 
         # Set the compose file and generate the required environment variables.
-        compose = git_compose or portainer_compose
+        if not (compose := git_compose or portainer_compose):
+            logger.error("No compose provided from Git or Portainer")
+            continue
+
         required_env_vars = portainer_helper.get_defined_env_vars(compose)
         try:
             config_environment = portainer_helper.generate_env_values_from_config(
