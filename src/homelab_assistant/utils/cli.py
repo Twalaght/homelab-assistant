@@ -1,4 +1,16 @@
-""" Runner helper module to allow entrypoint functions to be specified as decorators. """
+""" Runner module to provide entrypoint decorator functions for CLI interface.
+
+Example usage of CLI entrypoints: ::
+
+    _BASE_PARSER = cli.create_subparser(command="grouped_parsers", has_subparsers=True)
+    _PARSER = _BASE_PARSER.add_parser("awoo", parents=[cli.base_leaf_parser()])
+
+    @entrypoint(_PARSER)
+    def awoo() -> None:
+        print("Awoo!")
+
+    cli.run(parse_args(), Config())
+"""
 import argparse
 from typing import Any, Callable
 
@@ -9,6 +21,22 @@ from homelab_assistant.models.config import Config
 
 class RawRichHelpFormatter(RichHelpFormatter):
     """ Custom argparse formatter class to use Rich colouring, and preserve raw formatting. """
+
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+
+        self.styles |= {
+            "argparse.todo": "red",
+            "argparse.quote": "green",
+            "argparse.menu_item": "cyan",
+            "argparse.default": "italic dark_cyan",
+        }
+
+        self.highlights.extend([
+            r"(?P<todo>todo|TODO)",
+            r"(?P<quote>'.*?')",
+            r"\n\s+(?P<menu_item>\w+):",
+        ])
 
     def _rich_split_lines(self, text: _lazy_rich.Text, width: int) -> _lazy_rich.Lines:
         """ Define a custom line split method to preserve raw text formatting when displaying help strings. """
@@ -25,9 +53,9 @@ class RawRichHelpFormatter(RichHelpFormatter):
             return super()._get_help_string(action)
 
         if (
-            "%(default)" not in action.help       # Do not add default strings if they were already present.
-            and action.default != "==SUPPRESS=="  # Default value for the `--help` argument.
-            and action.default is not None        # Do not add default strings for null defaults.
+            "%(default)" not in (action.help or "")  # Do not add default strings if they were already present.
+            and action.default != "==SUPPRESS=="     # Default value for the `--help` argument.
+            and action.default is not None           # Do not add default strings for null defaults.
         ):
             # Argparse `nargs` may take the values ("?", "*", "+"). The value "+" requires one or more value
             # as input, and as such does not take a default. Both "?" and "*" permit no input, and thus are
@@ -35,20 +63,14 @@ class RawRichHelpFormatter(RichHelpFormatter):
             defaulting_nargs = ("?", "*")
             if action.option_strings or action.nargs in defaulting_nargs:
                 # Do not add a leading space if the default is intentionally on a new line.
-                padding = " " if action.help[-1] != "\n" else ""
-                action.help += f"{padding}Defaults to %(default)s."
+                padding = " " if not (help_str := action.help or "").endswith("\n") else ""
+                action.help = f"{help_str}{padding}Defaults to %(default)s."
 
         return super()._get_help_string(action)
 
 
+# Apply this formatter across all parsers (root AND subparsers).
 FORMATTER_CLASS = RawRichHelpFormatter
-FORMATTER_CLASS.styles["argparse.todo"] = "red"
-FORMATTER_CLASS.styles["argparse.quote"] = "green"
-FORMATTER_CLASS.styles["argparse.menu_item"] = "cyan"
-FORMATTER_CLASS.styles["argparse.default"] = "italic dark_cyan"
-FORMATTER_CLASS.highlights.append(r"(?P<todo>todo|TODO)")
-FORMATTER_CLASS.highlights.append(r"(?P<quote>'.*?')")
-FORMATTER_CLASS.highlights.append(r"\n\s+(?P<menu_item>\w+):")
 
 __ROOT_PARSER = argparse.ArgumentParser(formatter_class=FORMATTER_CLASS, add_help=False)
 __ROOT_PARSER.add_argument("-h", "--help", action="help", default=argparse.SUPPRESS,
@@ -107,7 +129,10 @@ def add_parser(name: str, subparsers: argparse._SubParsersAction | None = None, 
         "description": kwargs.get("description") or kwargs.get("help"),
     }
     add_parser_kwargs.update(kwargs)
-    return (subparsers or __ROOT_SUBPARSERS).add_parser(name, **add_parser_kwargs, add_help=False)
+    # TODO - `ty` current does not support handling `**kwargs`.
+    return (
+        subparsers or __ROOT_SUBPARSERS
+    ).add_parser(name, **add_parser_kwargs, add_help=False)  # type: ignore[invalid-argument-type]
 
 
 def run(args: argparse.Namespace) -> None:
