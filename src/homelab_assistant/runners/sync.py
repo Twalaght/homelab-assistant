@@ -121,6 +121,10 @@ def sync_endpoint(config: Config, portainer_helper: PortainerHelper, endpoint_na
         if portainer_compose != compose:
             display_compose_diff(base_compose=portainer_compose, new_compose=compose)
 
+        # If not syncing, exit early.
+        if not push:
+            continue
+
         # Add required environment variables and compose file to the update payload, and update the stack.
         try:
             portainer_helper.update_stack(
@@ -154,11 +158,11 @@ def display_compose_diff(base_compose: str, new_compose: str) -> None:
         return
 
     logger.info("Compose diff:")
-    for line in lines:
+    for line in lines[2:]:
         colour = "default"
         if line.startswith("+"):
             colour = "green"
         elif line.startswith("-"):
             colour = "red"
 
-        logger.info(f"[{colour}]{line}[/]")
+        logger.info(f"[{colour}]{line}[/]", extra={"highlighter": None})

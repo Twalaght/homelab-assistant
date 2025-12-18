@@ -45,11 +45,17 @@ class PortainerHelper:
         response = self.session.get(f"{self.portainer_url}/api/stacks")
         response.raise_for_status()
 
-        endpoint_grouped_stack_info = {self.endpoint_mapping[endpoint]: {} for endpoint in
-                                       {stack["EndpointId"] for stack in response.json()}}
+        endpoint_grouped_stack_info = {
+            self.endpoint_mapping[endpoint]: {} for endpoint in
+            {stack["EndpointId"] for stack in response.json()}
+            if endpoint in self.endpoint_mapping
+        }
 
         for stack in response.json():
-            friendly_endpoint_name = self.endpoint_mapping[stack["EndpointId"]]
+            if (endpoint := stack["EndpointId"] not in self.endpoint_mapping):
+                continue
+
+            friendly_endpoint_name = self.endpoint_mapping[endpoint]
             endpoint_grouped_stack_info[friendly_endpoint_name][stack["Name"]] = stack
 
         return endpoint_grouped_stack_info
