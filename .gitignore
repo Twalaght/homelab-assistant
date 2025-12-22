@@ -1,5 +1,6 @@
-# Top level YAML files
+# Top level YAML files, but not dotfiles
 /*.yaml
+!.*.yaml
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

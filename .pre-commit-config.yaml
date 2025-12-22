@@ -1,0 +1,49 @@
+repos:
+-   repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+    -   id: check-json
+    -   id: check-merge-conflict
+    -   id: check-executables-have-shebangs
+    -   id: check-shebang-scripts-are-executable
+    -   id: check-toml
+    -   id: check-yaml
+    -   id: name-tests-test
+        args: [--pytest-test-first]
+    -   id: end-of-file-fixer
+    -   id: mixed-line-ending
+        args: [--fix, auto]
+    -   id: pretty-format-json
+        args: [--autofix, --indent, "4"]
+-   repo: https://github.com/PyCQA/flake8
+    rev: 7.0.0
+    hooks:
+    -   id: flake8
+        entry: pflake8
+        additional_dependencies: [pyproject-flake8]
+-   repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.14.9
+    hooks:
+    -   id: ruff-check
+-   repo: https://github.com/lyz-code/yamlfix
+    rev: 1.17.0
+    hooks:
+    -   id: yamlfix
+        additional_dependencies: [maison>=2.0.0]
+-   repo: local
+    hooks:
+    # Pytest is defined as a local hook, as recommended by pre-commit author.
+    -   id: pytest
+        name: pytest
+        entry: pytest tests
+        language: system
+        types: [python]
+        pass_filenames: false
+-   repo: https://github.com/rhysd/actionlint
+    rev: v1.7.9
+    hooks:
+    -   id: actionlint
+-   repo: https://github.com/zizmorcore/zizmor-pre-commit
+    rev: v1.18.0
+    hooks:
+    -   id: zizmor
