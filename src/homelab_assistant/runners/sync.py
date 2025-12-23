@@ -1,32 +1,28 @@
 """ Runner module to sync Portainer stacks with local config. """
 import argparse
 import difflib
-from pathlib import Path
 from typing import Any
 
-import yaml
+from fluffless.utils import cli, logging
 from requests import HTTPError
 
 from homelab_assistant.helpers.portainer import PortainerHelper
 from homelab_assistant.models.config import Config
-from homelab_assistant.utils import cli, logging
+from homelab_assistant.utils.cli import leaf_parser
+
+PARSER = cli.add_parser(
+    name="sync",
+    parents=[leaf_parser()],
+    help="Synchronise local config with Portainer.",
+)
+PARSER.add_argument("--push", action="store_true", default=False, help="Sync changes to Portainer.")
 
 logger = logging.getLogger(__name__)
 
-_PARSER = cli.add_parser("sync")
-_PARSER.add_argument("--push", action="store_true", default=False, help="Sync changes to Portainer.")
-_PARSER.add_argument("config_file", help="YAML file to source configuration data from.")
 
-
-@cli.entrypoint(_PARSER)
-def sync(args: argparse.Namespace) -> None:
+@cli.entrypoint(PARSER)
+def sync(args: argparse.Namespace, config: Config) -> None:
     """ Sync Portainer stacks with local config. """
-    # Load config from the provided config file.
-    with Path(args.config_file).open() as f:
-        config_data = yaml.safe_load(f)
-        config = Config(**config_data)
-        config.check()
-
     # Create a Portainer helper from config.
     portainer_helper = PortainerHelper(
         api_key=config.portainer.api_key,

@@ -1,52 +1,40 @@
 [project]
 name = "homelab-assistant"
-version = "1.3.0"
-description = "HomeLab automation tools"
-authors = [{ name = "Twalaght", email = "52785900+Twalaght@users.noreply.github.com" }]
-requires-python = "~=3.12.0"
+dynamic = ["version"]
+description = "Automation tools for Homelab deployments, using Portainer's API"
 readme = "README.md"
+requires-python = ">=3.12"
+
 dependencies = [
-    "pydantic~=2.12",
-    "PyYAML~=6.0",
-    "requests~=2.32",
-    "rich~=14.2",
-    "rich-argparse~=1.7",
+    "fluffless>=0.0.2",
+    "pydantic>=2.12.5",
+    "pyyaml>=6.0.3",
+    "requests>=2.32.5",
 ]
 
 [project.optional-dependencies]
 dev = [
-    "flake8-assertive~=2.2",
-    "flake8-docstrings~=1.7",
-    "flake8-function-order>=0.0.5,<0.0.6",
-    "flake8-pyproject~=1.2",
-    "flake8~=7.3",
-    "pep8-naming>=0.15,<0.16",
-    "pre-commit-hooks~=6.0",
-    "pre-commit~=4.3",
-    "pydoclint>=0.7,<0.8",
-    "ruff>=0.14,<0.15",
-    "ty",
-    "yamlfix~=1.19",
+    "fluffless[dev]>=0.0.2",
 ]
 
 [project.scripts]
 hl-assist = "homelab_assistant.main:main"
 
-[tool.uv.build-backend]
-module-name = "homelab_assistant"
-
 [build-system]
-requires = ["uv_build>=0.9.6,<0.10.0"]
-build-backend = "uv_build"
+requires = ["setuptools>=80.9.0", "versioningit>=3.3.0"]
+build-backend = "setuptools.build_meta"
 
+[tool.versioningit.vcs]
+method = "git"
+default-tag = "0.0.0"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+# Flake8 python linter - see https://github.com/PyCQA/flake8
+# Using a plugin to support pyproject.toml - see https://github.com/john-hen/Flake8-pyproject
 [tool.flake8]
 max-line-length = 120
-
-per-file-ignores = [
-    "src/homelab_assistant/utils/logging.py:A003,A005,N802",  # A003 Class attribute is shadowing a Python builtin
-                                                              # A005 The module is shadowing a Python builtin module
-                                                              # N802 Function name should be lowercase
-]
 
 extend-ignore = [
     "ANN002",  # Missing type annotation for *args
@@ -54,20 +42,28 @@ extend-ignore = [
     "ANN101",  # Missing type annotation for self in method
     "ANN102",  # Missing type annotation for cls in classmethod
     "CCE001",  # Wrong class attributes order
+    "D101",    # Missing docstring in public class
+    "D102",    # Missing docstring in public method
+    "D103",    # Missing docstring in public function
     "D104",    # Missing docstring in public package
+    "D106",    # Missing docstring in public nested class
     "D107",    # Missing docstring in __init__
     "D210",    # No whitespaces allowed surrounding docstring text
     "DOC601",  # Class docstring contains fewer class attributes than actual class attributes.
     "DOC603",  # Class docstring attributes are different from actual class attributes.
 ]
 
+# Pydoclint config
 style = "google"
 
+# Consider homelab assistant and tests as local packages
 import-order-style = "edited"
 application-import-names = [
     "homelab_assistant",
+    "tests",
 ]
 
+# Ruff python linter - see https://github.com/astral-sh/ruff
 [tool.ruff]
 line-length = 120
 target-version = "py312"
@@ -77,16 +73,14 @@ quote-style = "double"
 indent-style = "space"
 
 [tool.ruff.lint]
-# Enable all linting options, then manually disable what is not required
+# Enable all linting initially, then disable specific rules and rulesets.
 select = ["ALL"]
 
 ignore = [
     # Disable whole sets of rules
-    "DTZ", # flake8-datetimez
     "EM",  # flake8-errmsg
     "FBT", # flake8-boolean-trap
     "G",   # flake8-logging-format
-    "T20", # flake8-print
     "TD",  # flake8-todos
 
     "ANN002", # Missing type annotation for `*args`
@@ -99,8 +93,6 @@ ignore = [
     "D107", # Missing docstring in `__init__`
     "D210", # No whitespaces allowed surrounding docstring text
 
-    "E701", # Multiple statements on one line (colon)
-
     "FIX002", # Line contains TODO, consider resolving the issue
 
     "PLR0912", # Too many branches
@@ -108,20 +100,14 @@ ignore = [
     "PLR0915", # Too many statements
     "PLR2004", # Magic value used in comparison
 
-    "PT006", # Wrong name(s) type in `@pytest.mark.parametrize`
-
     "RUF012", # Mutable class attributes should be annotated with `typing.ClassVar`
-    "RUF013", # PEP 484 prohibits implicit Optional
-
-    "S105", # Possible hardcoded password assigned to variable
-    "S106", # Possible hardcoded password assigned to argument
+    "RUF013", # PEP 484 prohibits implicit optional
 
     "SLF001", # Private member accessed
 
     "TC006", # Add quotes to type expression in `typing.cast()`
 
     "TRY003", # Avoid specifying long messages outside the exception class
-    "TRY301", # Abstract raise to an inner function
 
     "UP024", # Replace aliased errors with `OSError`
     "UP035", # Import from {target} instead: {names}
@@ -135,7 +121,7 @@ order-by-type = false
 [tool.ruff.lint.pydocstyle]
 convention = "google"
 
-[tool.yamlfix]
+[tool.yamlfix]  # YAML auto-formatter - https://lyz-code.github.io/yamlfix/
 allow_duplicate_keys = true
 line_length = 120
 none_representation = "null"

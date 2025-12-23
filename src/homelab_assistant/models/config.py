@@ -1,7 +1,6 @@
 """ Dataclass definitions for main application config object. """
-from pydantic import BaseModel
-
-from homelab_assistant.utils import logging
+from fluffless.models.base_model import BaseModel
+from fluffless.utils import logging
 
 logger = logging.getLogger(__name__)
 

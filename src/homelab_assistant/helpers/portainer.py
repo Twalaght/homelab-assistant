@@ -4,9 +4,9 @@ import re
 from typing import Any, cast
 
 import requests
+from fluffless.utils import logging
 
 from homelab_assistant.models.config import Config, Endpoint, GitDefault, Stack
-from homelab_assistant.utils import logging
 
 logger = logging.getLogger(__name__)
 
@@ -52,7 +52,7 @@ class PortainerHelper:
         }
 
         for stack in response.json():
-            if (endpoint := stack["EndpointId"] not in self.endpoint_mapping):
+            if (endpoint := stack["EndpointId"]) not in self.endpoint_mapping:
                 continue
 
             friendly_endpoint_name = self.endpoint_mapping[endpoint]
