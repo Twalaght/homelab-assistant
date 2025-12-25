@@ -1,0 +1,80 @@
+name: PR status checks
+on: [pull_request]
+permissions: {}
+concurrency:
+    group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+    cancel-in-progress: true
+jobs:
+    flake8:
+        name: Flake8 linting
+        runs-on: ubuntu-latest
+        permissions:
+            contents: read
+        steps:
+        -   name: Check out repository
+            uses: actions/checkout@v6
+            with:
+                persist-credentials: false
+        -   name: Install uv
+            uses: astral-sh/setup-uv@v7
+        -   name: Install Python project and dependencies
+            run: |
+                uv sync --extra dev
+        -   name: Run flake8
+            run: uv run flake8 src tests
+    ruff:
+        name: Ruff linting
+        runs-on: ubuntu-latest
+        permissions:
+            contents: read
+        steps:
+        -   name: Check out repository
+            uses: actions/checkout@v6
+            with:
+                persist-credentials: false
+        -   name: Run Ruff
+            uses: astral-sh/ruff-action@v3
+            with:
+                src: >-
+                    src
+                    tests
+    ty:
+        name: Ty type checking
+        runs-on: ubuntu-latest
+        permissions:
+            contents: read
+        steps:
+        -   name: Check out repository
+            uses: actions/checkout@v6
+            with:
+                persist-credentials: false
+        -   name: Install uv
+            uses: astral-sh/setup-uv@v7
+        -   name: Install Python project and dependencies
+            run: |
+                uv sync --extra dev
+        -   name: Run ty
+            run: uv run ty check src tests
+    actionlint:
+        name: Actionlint actions checks
+        runs-on: ubuntu-latest
+        steps:
+        -   name: Check out repository
+            uses: actions/checkout@v6
+            with:
+                persist-credentials: false
+        -   name: Run Actionlint
+            uses: reviewdog/action-actionlint@v1.65.2
+    zizmor:
+        name: Zizmor actions checks
+        runs-on: ubuntu-latest
+        permissions:
+            security-events: write  # Required for access to advanced security
+            contents: read
+        steps:
+        -   name: Check out repository
+            uses: actions/checkout@v6
+            with:
+                persist-credentials: false
+        -   name: Run Zizmor
+            uses: zizmorcore/zizmor-action@v0.3.0
