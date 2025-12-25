@@ -1,0 +1,32 @@
+name: Build and release PyPI package
+on:
+    push:
+        tags: [v*]
+permissions: {}
+concurrency:
+    group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+    cancel-in-progress: false
+jobs:
+    release-package:
+        name: Build and publish PyPI package
+        runs-on: ubuntu-latest
+        environment:
+            name: pypi
+        permissions:
+            id-token: write  # Required for publishing package
+            contents: read
+        steps:
+        -   name: Checkout
+            uses: actions/checkout@v6
+            with:
+                persist-credentials: false
+        -   name: Install uv
+            uses: astral-sh/setup-uv@v7
+            with:
+                enable-cache: false
+        -   name: Install Python
+            run: uv python install
+        -   name: Build package
+            run: uv build
+        -   name: Publish package to PyPI
+            run: uv publish
