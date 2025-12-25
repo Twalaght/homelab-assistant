@@ -3,20 +3,24 @@ import argparse
 from pathlib import Path
 
 import yaml
+from fluffless.utils import cli, logging
 
 from homelab_assistant.helpers.portainer import PortainerHelper
 from homelab_assistant.models.config import Config
-from homelab_assistant.utils import cli, logging
+from homelab_assistant.utils.cli import leaf_parser
+
+PARSER = cli.add_parser(
+    name="export",
+    parents=[leaf_parser()],
+    help="Export Portainer config to a local YAML file.",
+)
+PARSER.add_argument("export_file", help="YAML file to write configuration data to.")
 
 logger = logging.getLogger(__name__)
 
-_PARSER = cli.add_parser("export")
-_PARSER.add_argument("config_file", help="YAML file to source configuration data from.")
-_PARSER.add_argument("export_file", help="YAML file to write configuration data to.")
 
-
-@cli.entrypoint(_PARSER)
-def sync(args: argparse.Namespace) -> None:
+@cli.entrypoint(PARSER)
+def export(args: argparse.Namespace, config: Config) -> None:
     """ Export Portainer stacks to local config. """
     # Load config from the provided config file.
     with Path(args.config_file).open() as f:
