@@ -134,3 +134,13 @@ order-by-type = false
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"
+
+[tool.yamlfix]
+allow_duplicate_keys = true
+line_length = 120
+none_representation = "null"
+indent_mapping = 4
+indent_offset = 0
+indent_sequence = 4
+explicit_start = false
+preserve_quotes = true
