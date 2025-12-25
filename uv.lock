@@ -275,15 +275,15 @@ wheels = [
 
 [[package]]
 name = "fluffless"
-version = "0.0.2"
+version = "0.0.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "rich" },
     { name = "rich-argparse" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/49/37/40a1e5643ed092e08106da2702846f8fafe6620fd1adde05bab1080f7a1e/fluffless-0.0.2.tar.gz", hash = "sha256:59e7a81429214fbc40d285e1e6b2cc38286fb4f8dce2c4eb5e5ef10d2822d376", size = 20764, upload-time = "2025-12-25T10:12:53.761Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/9b/e4/09ecdd858b41337d6ad99fedbdb670201d961dc813568968f72a11845c43/fluffless-0.0.3.tar.gz", hash = "sha256:42fb0410f6c6619edf56111d5a6868543a4b78d39d8c4e182dcf85db0f647d03", size = 20714, upload-time = "2025-12-25T12:43:14.488Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/fe/61/6f0e575591630284fcf1c9a5141909747b960dc799d533dcb98d58d60afb/fluffless-0.0.2-py3-none-any.whl", hash = "sha256:f9a287255562b7d6b6a9dd542dac284c6b2ff5ea303d456628c2bdf079cb55b1", size = 20475, upload-time = "2025-12-25T10:12:54.458Z" },
+    { url = "https://files.pythonhosted.org/packages/6f/08/5e1f11e4f581045678cdb331e7f2278964421ada6b689a0c7f1c5f748c1f/fluffless-0.0.3-py3-none-any.whl", hash = "sha256:6a0c4b916bd418e26f54cd08e6823d90e55bd07521ca84199f7ea8781f7473ed", size = 20223, upload-time = "2025-12-25T12:43:15.33Z" },
 ]
 
 [package.optional-dependencies]
@@ -322,8 +322,8 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "fluffless", specifier = ">=0.0.2" },
-    { name = "fluffless", extras = ["dev"], marker = "extra == 'dev'", specifier = ">=0.0.2" },
+    { name = "fluffless", specifier = ">=0.0.3" },
+    { name = "fluffless", extras = ["dev"], marker = "extra == 'dev'", specifier = ">=0.0.3" },
     { name = "pydantic", specifier = ">=2.12.5" },
     { name = "pyyaml", specifier = ">=6.0.3" },
     { name = "requests", specifier = ">=2.32.5" },
