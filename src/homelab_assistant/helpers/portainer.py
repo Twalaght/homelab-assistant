@@ -32,6 +32,14 @@ class PortainerHelper:
 
         return {endpoint["Id"]: endpoint["Name"] for endpoint in response.json()}
 
+    def get_endpoint_id(self, endpoint_name: str) -> int:
+        """ Get the endpoint ID associated with a given friendly name. """
+        if not self.endpoint_mapping:
+            self.endpoint_mapping = self.map_endpoints()
+
+        inverted_mapping = {v: k for k, v in self.endpoint_mapping.items()}
+        return inverted_mapping[endpoint_name]
+
     def get_stacks(self) -> dict[str, dict[str, dict[str, Any]]]:
         """ Get data on all defined Portainer stacks, in all endpoints.
 
@@ -60,7 +68,39 @@ class PortainerHelper:
 
         return endpoint_grouped_stack_info
 
-    def update_stack(self, endpoint_id: int, stack_id: int, compose: str, environment: dict[str, str]) -> None:
+    def create_stack(
+        self, endpoint_id: int, stack_name: str, compose: str, environment: dict[str, str],
+    ) -> dict[str, Any]:
+        """ Create a new stack on a given endpoint.
+
+        Args:
+            endpoint_id (int): Endpoint to deploy the new stack to.
+            stack_name (str): Name of the new stack.
+            compose (str): Compose file string to deploy the stack with.
+            environment (dict[str, str]): Environment variables to associate with the stack.
+
+        Returns:
+            dict[str, Any]: Response from the API request.
+        """
+        payload = {
+            "env": [environment],
+            "fromAppTemplate": False,
+            "name": stack_name,
+            "stackFileContent": compose,
+        }
+
+        response = self.session.post(
+            url=f"{self.portainer_url}/api/stacks/create/standalone/string",
+            params={"endpointId": endpoint_id},
+            json=payload,
+        )
+        response.raise_for_status()
+
+        return response.json()
+
+    def update_stack(
+        self, endpoint_id: int, stack_id: int, compose: str, environment: dict[str, str],
+    ) -> dict[str, Any]:
         """ Update a stack specified by endpoint and stack ID with a given compose and environment.
 
         Args:
@@ -68,6 +108,9 @@ class PortainerHelper:
             stack_id (int): ID of the stack to update.
             compose (str): Compose file content.
             environment (dict[str, str]): Key value pairs of environment variable names to values.
+
+        Returns:
+            dict[str, Any]: Response from the API request.
         """
         # Add required environment variables and compose file to the update payload.
         payload = {
